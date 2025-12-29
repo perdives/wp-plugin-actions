@@ -1,0 +1,79 @@
+name: 'Build WordPress Plugin Package'
+description: 'Build a production-ready WordPress plugin zip file using WP-CLI dist-archive'
+author: 'Perdives'
+
+inputs:
+  plugin_slug:
+    description: 'Plugin slug for the zip filename (e.g., my-plugin)'
+    required: true
+  version:
+    description: 'Plugin version (e.g., 1.2.3). If not provided, will be extracted from plugin_file'
+    required: false
+  plugin_file:
+    description: 'Main plugin PHP file. Required if version is not provided'
+    required: false
+  create_checksum:
+    description: 'Create SHA256 checksum file'
+    required: false
+    default: 'true'
+
+outputs:
+  zip_file:
+    description: 'Path to the generated zip file'
+    value: ${{ steps.build.outputs.zip_file }}
+  checksum_file:
+    description: 'Path to the checksum file (if created)'
+    value: ${{ steps.build.outputs.checksum_file }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get version if not provided
+      id: get_version
+      if: inputs.version == ''
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.plugin_file }}" ]; then
+          echo "Error: Either version or plugin_file must be provided"
+          exit 1
+        fi
+        VERSION=$(grep "Version:" ${{ inputs.plugin_file }} | sed 's/.*Version: *//' | tr -d ' ')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Set version variable
+      id: set_version
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Build distribution package
+      id: build
+      shell: bash
+      run: |
+        PLUGIN_SLUG="${{ inputs.plugin_slug }}"
+        VERSION="${{ steps.set_version.outputs.version }}"
+        ZIP_FILE="${PLUGIN_SLUG}-${VERSION}.zip"
+
+        echo "Building ${ZIP_FILE}..."
+        wp dist-archive . "./${ZIP_FILE}" \
+          --plugin-dirname="${PLUGIN_SLUG}" \
+          --allow-root
+
+        echo "zip_file=${ZIP_FILE}" >> $GITHUB_OUTPUT
+
+        if [ "${{ inputs.create_checksum }}" = "true" ]; then
+          CHECKSUM_FILE="${ZIP_FILE}.sha256"
+          sha256sum "${ZIP_FILE}" > "${CHECKSUM_FILE}"
+          echo "checksum_file=${CHECKSUM_FILE}" >> $GITHUB_OUTPUT
+          echo "Created checksum: ${CHECKSUM_FILE}"
+        fi
+
+        echo "Build complete: ${ZIP_FILE}"
+
+branding:
+  icon: 'package'
+  color: 'purple'

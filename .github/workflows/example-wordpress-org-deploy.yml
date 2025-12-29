@@ -1,0 +1,64 @@
+# Example: Deploy to WordPress.org using Perdives actions + 10up deploy
+# This workflow builds with our actions, then deploys to WordPress.org SVN
+
+name: Deploy to WordPress.org
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Deploy to WordPress.org
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          tools: composer:v2
+
+      - name: Get plugin version
+        id: version
+        uses: perdives/wp-plugin-actions/get-plugin-version@v0.1
+        with:
+          plugin_file: 'your-plugin.php'  # Change this
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Setup WP-CLI
+        uses: perdives/wp-plugin-actions/setup-wp-cli@v0.1
+
+      - name: Build plugin package
+        uses: perdives/wp-plugin-actions/build-plugin@v0.1
+        with:
+          plugin_slug: 'your-plugin'  # Change this
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" *.zip *.sha256 --clobber
+            echo "Assets uploaded to GitHub release $TAG"
+          fi
+
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        with:
+          generate-zip: false  # We already built it with our action
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: your-plugin  # Change this

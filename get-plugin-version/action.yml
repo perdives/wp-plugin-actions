@@ -1,0 +1,33 @@
+name: 'Get WordPress Plugin Version'
+description: 'Extract version number from WordPress plugin file header'
+author: 'Perdives'
+
+inputs:
+  plugin_file:
+    description: 'Main plugin PHP file (e.g., my-plugin.php)'
+    required: true
+
+outputs:
+  version:
+    description: 'The plugin version (e.g., 1.2.3)'
+    value: ${{ steps.get_version.outputs.version }}
+  tag_name:
+    description: 'The git tag name with v prefix (e.g., v1.2.3)'
+    value: ${{ steps.get_version.outputs.tag_name }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract version from plugin file
+      id: get_version
+      shell: bash
+      run: |
+        VERSION=$(grep "Version:" ${{ inputs.plugin_file }} | sed 's/.*Version: *//' | tr -d ' ')
+        TAG_NAME="v${VERSION}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "Found version: $VERSION"
+
+branding:
+  icon: 'tag'
+  color: 'blue'

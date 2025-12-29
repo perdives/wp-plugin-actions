@@ -1,0 +1,54 @@
+name: 'PHPCS Check'
+description: 'Run PHP CodeSniffer checks on WordPress plugins'
+author: 'Perdives'
+
+inputs:
+  command:
+    description: 'Command to run PHPCS (e.g., composer check-cs, vendor/bin/phpcs)'
+    required: false
+    default: 'composer check-cs'
+  fail_on_error:
+    description: 'Fail the action if PHPCS finds issues'
+    required: false
+    default: 'true'
+
+outputs:
+  exit_code:
+    description: 'PHPCS exit code (0 = no issues, >0 = issues found)'
+    value: ${{ steps.phpcs.outputs.exit_code }}
+  has_errors:
+    description: 'Whether PHPCS found any issues (true/false)'
+    value: ${{ steps.phpcs.outputs.has_errors }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run PHPCS
+      id: phpcs
+      shell: bash
+      run: |
+        set +e
+        OUTPUT=$(${{ inputs.command }} 2>&1)
+        EXIT_CODE=$?
+        echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "has_errors=false" >> $GITHUB_OUTPUT
+          echo "✓ PHPCS check passed - no issues found"
+        else
+          echo "has_errors=true" >> $GITHUB_OUTPUT
+          echo "✗ PHPCS check failed - issues found"
+          echo "$OUTPUT"
+        fi
+
+        echo "$OUTPUT" > phpcs-output.txt
+
+        if [ "${{ inputs.fail_on_error }}" = "true" ] && [ $EXIT_CODE -ne 0 ]; then
+          exit 1
+        fi
+
+        exit 0
+
+branding:
+  icon: 'check-circle'
+  color: 'orange'

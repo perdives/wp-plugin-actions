@@ -1,0 +1,73 @@
+# Example: Complete release workflow using Perdives actions
+# Copy this to your plugin repository and customize as needed
+
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build Plugin and Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          tools: composer:v2
+
+      - name: Get plugin version
+        id: version
+        uses: perdives/wp-plugin-actions/get-plugin-version@v0.1
+        with:
+          plugin_file: 'your-plugin.php'  # Change this
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: Setup WP-CLI
+        uses: perdives/wp-plugin-actions/setup-wp-cli@v0.1
+
+      - name: Build plugin package
+        uses: perdives/wp-plugin-actions/build-plugin@v0.1
+        with:
+          plugin_slug: 'your-plugin'  # Change this
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Create release
+        uses: release-drafter/release-drafter@v6
+        with:
+          version: ${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag_name }}"
+
+          # Wait for release to be created
+          for i in {1..12}; do
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              gh release upload "$TAG" *.zip *.sha256 --clobber
+              echo "Assets uploaded to release $TAG"
+              exit 0
+            fi
+            echo "Waiting for release... ($i/12)"
+            sleep 5
+          done
+
+          echo "Release not found"
+          exit 1

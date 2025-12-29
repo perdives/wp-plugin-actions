@@ -1,0 +1,24 @@
+name: 'Setup WP-CLI with Dist Archive'
+description: 'Install WP-CLI and the dist-archive package for creating WordPress plugin distributions'
+author: 'Perdives'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download and install WP-CLI
+      shell: bash
+      run: |
+        curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+        chmod +x wp-cli.phar
+        sudo mv wp-cli.phar /usr/local/bin/wp
+        wp --info
+
+    - name: Install dist-archive package
+      shell: bash
+      run: |
+        wp package install wp-cli/dist-archive-command --allow-root
+        echo "WP-CLI dist-archive package installed successfully"
+
+branding:
+  icon: 'download'
+  color: 'green'

@@ -1,0 +1,50 @@
+name: 'WordPress Plugin Check'
+description: 'Run WordPress Plugin Check action on your plugin'
+author: 'Perdives'
+
+inputs:
+  fail_on_error:
+    description: 'Fail the action if Plugin Check finds issues'
+    required: false
+    default: 'true'
+
+outputs:
+  has_errors:
+    description: 'Whether Plugin Check found any issues (true/false)'
+    value: ${{ steps.check.outputs.has_errors }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare clean plugin directory
+      shell: bash
+      run: |
+        mkdir -p /tmp/plugin-clean
+        rsync -av --exclude-from='.distignore' ./ /tmp/plugin-clean/
+        find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
+        cp -r /tmp/plugin-clean/. ./
+
+    - name: Run WordPress Plugin Check
+      id: plugin-check
+      uses: wordpress/plugin-check-action@v1
+      continue-on-error: true
+
+    - name: Set outputs
+      id: check
+      shell: bash
+      run: |
+        if [ "${{ steps.plugin-check.outcome }}" = "failure" ]; then
+          echo "has_errors=true" >> $GITHUB_OUTPUT
+          echo "✗ Plugin Check found issues"
+
+          if [ "${{ inputs.fail_on_error }}" = "true" ]; then
+            exit 1
+          fi
+        else
+          echo "has_errors=false" >> $GITHUB_OUTPUT
+          echo "✓ Plugin Check passed"
+        fi
+
+branding:
+  icon: 'shield'
+  color: 'blue'

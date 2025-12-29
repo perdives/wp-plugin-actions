@@ -1,0 +1,53 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+.github
+.distignore
+
+# Development dependencies
+node_modules
+composer.lock
+
+# Config files
+.editorconfig
+phpcs.xml
+phpcs.xml.dist
+mix-manifest.json
+package-lock.json
+package.json
+webpack.mix.js
+webpack.config.js
+
+# Documentation
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Auto generated files
+.DS_Store
+Thumbs.db
+.*~
+
+# Testing
+tests
+phpunit.xml
+phpunit.xml.dist
+.phpcs.xml
+.phpcs.xml.dist
+.env.test
+.env.test.example
+
+# CI/CD
+.travis.yml
+.gitlab-ci.yml
+bitbucket-pipelines.yml
+.circleci
+
+# Cache files
+.phpcs.cache
+
+# Other
+*.sql
+*.tar.gz
+*.zip

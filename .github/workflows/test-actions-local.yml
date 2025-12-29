@@ -1,0 +1,56 @@
+# Test workflow for running with `act` locally
+# Run with: act -W .github/workflows/test-actions-local.yml
+
+name: Test Actions Locally
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - test
+
+jobs:
+  test-build:
+    name: Test Build Action
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout test plugin
+        uses: actions/checkout@v4
+        with:
+          repository: 'your-org/your-plugin'  # Would need to be a real repo
+          path: plugin
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          tools: composer:v2
+
+      - name: Test get-plugin-version action
+        id: version
+        uses: ./get-plugin-version  # Local path
+        with:
+          plugin_file: 'plugin/your-plugin.php'
+
+      - name: Show version
+        run: |
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "Tag: ${{ steps.version.outputs.tag_name }}"
+
+      - name: Install composer deps
+        run: cd plugin && composer install --no-dev
+
+      - name: Test setup-wp-cli action
+        uses: ./setup-wp-cli
+
+      - name: Test build-plugin action
+        uses: ./build-plugin
+        with:
+          plugin_slug: 'your-plugin'
+          version: ${{ steps.version.outputs.version }}
+
+      - name: Verify zip exists
+        run: |
+          ls -lh plugin/*.zip
+          echo "Build successful!"
