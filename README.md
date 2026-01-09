@@ -46,6 +46,29 @@ Build production-ready WordPress plugin zip using WP-CLI dist-archive.
 
 ---
 
+### ☁️ upload-to-release
+Upload plugin assets to a GitHub release with optional retry logic.
+
+```yaml
+- uses: perdives/wp-plugin-actions/upload-to-release@v0.1
+  with:
+    tag: 'v1.2.3'
+    files: 'my-plugin-*.zip my-plugin-*.sha256'
+    wait_for_release: true  # Wait for Release Drafter
+    max_retries: 12
+    retry_interval: 5
+```
+
+**Outputs:**
+- `uploaded`: `true` if files uploaded successfully
+
+**When to use `wait_for_release`:**
+- When using Release Drafter (creates releases asynchronously)
+- When multiple workflows run in parallel
+- To handle race conditions between build and release creation
+
+---
+
 ### ✅ phpcs-check
 Run PHP CodeSniffer checks.
 
@@ -108,16 +131,18 @@ jobs:
 
       - uses: perdives/wp-plugin-actions/setup-wp-cli@v0.1
 
-      - uses: perdives/wp-plugin-actions/build-plugin@v0.1
+      - name: Build plugin
+        id: build
+        uses: perdives/wp-plugin-actions/build-plugin@v0.1
         with:
           plugin_slug: 'my-plugin'
           version: ${{ steps.version.outputs.version }}
 
-      - uses: release-drafter/release-drafter@v6
+      - uses: perdives/wp-plugin-actions/upload-to-release@v0.1
         with:
-          version: ${{ steps.version.outputs.version }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.version.outputs.tag }}
+          files: ${{ steps.build.outputs.zip_file }} ${{ steps.build.outputs.checksum_file }}
+          wait_for_release: true
 ```
 
 ## Quick Links
@@ -217,6 +242,9 @@ wp-plugin-actions/
 │   └── action.yml
 ├── build-plugin/
 │   └── action.yml
+├── upload-to-release/
+│   ├── action.yml
+│   └── README.md
 ├── phpcs-check/
 │   └── action.yml
 ├── plugin-check/

@@ -1,0 +1,87 @@
+name: 'Upload to GitHub Release'
+description: 'Upload plugin assets to a GitHub release with optional retry logic for Release Drafter'
+author: 'Perdives'
+
+inputs:
+  tag:
+    description: 'Release tag name (e.g., v1.2.3)'
+    required: true
+  files:
+    description: 'Files to upload (space-separated glob patterns)'
+    required: true
+  wait_for_release:
+    description: 'Wait for release to be created before uploading (useful with Release Drafter)'
+    required: false
+    default: 'false'
+  max_retries:
+    description: 'Maximum number of retry attempts when waiting for release'
+    required: false
+    default: '12'
+  retry_interval:
+    description: 'Seconds to wait between retry attempts'
+    required: false
+    default: '5'
+  github_token:
+    description: 'GitHub token for authentication (defaults to GITHUB_TOKEN)'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  uploaded:
+    description: 'Whether files were successfully uploaded'
+    value: ${{ steps.upload.outputs.uploaded }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Upload assets to release
+      id: upload
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        TAG_NAME="${{ inputs.tag }}"
+        FILES="${{ inputs.files }}"
+        WAIT_FOR_RELEASE="${{ inputs.wait_for_release }}"
+        MAX_RETRIES="${{ inputs.max_retries }}"
+        RETRY_INTERVAL="${{ inputs.retry_interval }}"
+
+        if [ "$WAIT_FOR_RELEASE" = "true" ]; then
+          echo "Waiting for release $TAG_NAME to be created..."
+          ATTEMPT=0
+
+          while [ $ATTEMPT -lt $MAX_RETRIES ]; do
+            if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+              echo "✓ Found release $TAG_NAME"
+              break
+            fi
+
+            ATTEMPT=$((ATTEMPT + 1))
+            if [ $ATTEMPT -lt $MAX_RETRIES ]; then
+              echo "Attempt $ATTEMPT/$MAX_RETRIES - Release not found yet, retrying in ${RETRY_INTERVAL}s..."
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          if [ $ATTEMPT -eq $MAX_RETRIES ]; then
+            echo "✗ Release $TAG_NAME not found after $MAX_RETRIES attempts"
+            echo "uploaded=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        fi
+
+        echo "Uploading assets to release $TAG_NAME..."
+        gh release upload "$TAG_NAME" $FILES --clobber
+
+        if [ $? -eq 0 ]; then
+          echo "✓ Assets uploaded successfully"
+          echo "uploaded=true" >> $GITHUB_OUTPUT
+        else
+          echo "✗ Failed to upload assets"
+          echo "uploaded=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
