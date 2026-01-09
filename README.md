@@ -109,7 +109,6 @@ Run WordPress Plugin Check. Automatically sets up PHP and installs dependencies.
   with:
     fail_on_error: 'true'  # Optional, default: true
     php_version: '7.4'  # Optional, default: 7.4
-    exclude_vendor: 'true'  # Optional, default: true (excludes vendor/ from check)
 ```
 
 **Outputs:**
@@ -117,9 +116,9 @@ Run WordPress Plugin Check. Automatically sets up PHP and installs dependencies.
 
 **Notes:**
 - Automatically runs `composer install --no-dev --optimize-autoloader`
-- By default, **excludes `vendor/` directory** from checks (since it's third-party code)
-- Set `exclude_vendor: 'false'` to check the full distributable package including dependencies
-- Respects `.distignore` file for additional exclusions
+- Includes `vendor/` directory (needed for plugins to activate)
+- WordPress Plugin Check already ignores vendor files during scanning
+- Respects `.distignore` file for exclusions
 
 ## Complete Example Workflow
 
