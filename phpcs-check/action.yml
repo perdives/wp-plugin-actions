@@ -11,6 +11,14 @@ inputs:
     description: 'Fail the action if PHPCS finds issues'
     required: false
     default: 'true'
+  php_version:
+    description: 'PHP version to use'
+    required: false
+    default: '7.4'
+  composer_args:
+    description: 'Additional arguments for composer install'
+    required: false
+    default: '--prefer-dist --no-progress'
 
 outputs:
   exit_code:
@@ -23,6 +31,16 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php_version }}
+        tools: composer:v2
+
+    - name: Install dependencies
+      shell: bash
+      run: composer install ${{ inputs.composer_args }}
+
     - name: Run PHPCS
       id: phpcs
       shell: bash

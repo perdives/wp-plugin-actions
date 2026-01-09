@@ -70,32 +70,39 @@ Upload plugin assets to a GitHub release with optional retry logic.
 ---
 
 ### ✅ phpcs-check
-Run PHP CodeSniffer checks.
+Run PHP CodeSniffer checks. Automatically sets up PHP and installs dependencies.
 
 ```yaml
 - uses: perdives/wp-plugin-actions/phpcs-check@v0.1
   with:
     command: 'composer check-cs'  # Optional, default: composer check-cs
     fail_on_error: 'true'  # Optional, default: true
+    php_version: '7.4'  # Optional, default: 7.4
+    composer_args: '--prefer-dist --no-progress'  # Optional
 ```
 
 **Outputs:**
 - `exit_code`: PHPCS exit code
 - `has_errors`: `true` if issues found
 
+**Note:** This action automatically runs `composer install` with the specified args.
+
 ---
 
 ### 🛡️ plugin-check
-Run WordPress Plugin Check.
+Run WordPress Plugin Check. Automatically sets up PHP and installs dependencies.
 
 ```yaml
 - uses: perdives/wp-plugin-actions/plugin-check@v0.1
   with:
     fail_on_error: 'true'  # Optional, default: true
+    php_version: '7.4'  # Optional, default: 7.4
 ```
 
 **Outputs:**
 - `has_errors`: `true` if issues found
+
+**Note:** This action automatically runs `composer install --no-dev --optimize-autoloader`.
 
 ## Complete Example Workflow
 
@@ -116,32 +123,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: '7.4'
-          tools: composer:v2
-
       - name: Get version
         id: version
         uses: perdives/wp-plugin-actions/get-plugin-version@v0.1
         with:
           plugin_file: 'my-plugin.php'
 
-      - run: composer install --no-dev --optimize-autoloader
-
-      - uses: perdives/wp-plugin-actions/setup-wp-cli@v0.1
-
       - name: Build plugin
-        id: build
         uses: perdives/wp-plugin-actions/build-plugin@v0.1
         with:
-          plugin_slug: 'my-plugin'
-          version: ${{ steps.version.outputs.version }}
+          plugin_file: 'my-plugin.php'
+          generate-checksum: true
 
-      - uses: perdives/wp-plugin-actions/upload-to-release@v0.1
+      - name: Upload to release
+        uses: perdives/wp-plugin-actions/upload-to-release@v0.1
         with:
           tag: ${{ steps.version.outputs.tag }}
-          files: ${{ steps.build.outputs.zip_file }} ${{ steps.build.outputs.checksum_file }}
+          files: 'my-plugin-*.zip my-plugin-*.sha256'
           wait_for_release: true
 ```
 
