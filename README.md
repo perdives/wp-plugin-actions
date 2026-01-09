@@ -29,20 +29,30 @@ Install WP-CLI and the dist-archive package.
 ---
 
 ### 🔨 build-plugin
-Build production-ready WordPress plugin zip using WP-CLI dist-archive.
+Build production-ready WordPress plugin zip. Automatically handles PHP setup, composer install, npm install/build (if package.json exists), and WP-CLI packaging.
 
 ```yaml
 - uses: perdives/wp-plugin-actions/build-plugin@v0.1
   with:
-    plugin_slug: 'my-plugin'
-    version: '1.2.3'  # Optional, will extract from plugin_file if not provided
-    plugin_file: 'my-plugin.php'  # Required if version not provided
-    create_checksum: 'true'  # Optional, default: true
+    plugin-slug: 'my-plugin'
+    plugin-file: 'my-plugin.php'  # Optional, auto-extracts version
+    version: '1.2.3'  # Optional, extracted from plugin_file if not provided
+    generate-checksum: 'true'  # Optional, default: true
+    php-version: '7.4'  # Optional, default: 7.4
+    composer-args: '--no-dev --optimize-autoloader'  # Optional
+    npm-script: 'build'  # Optional, default: build (set empty to skip)
+    skip-npm: 'false'  # Optional, set true to skip npm entirely
 ```
 
 **Outputs:**
 - `zip_file`: Path to generated zip
 - `checksum_file`: Path to SHA256 checksum
+
+**What it does:**
+1. Sets up PHP and installs composer dependencies (`--no-dev --optimize-autoloader`)
+2. If `package.json` exists: runs `npm install` and `npm run build` (or your custom script)
+3. Packages plugin using WP-CLI dist-archive (respects `.distignore`)
+4. Generates SHA256 checksum
 
 ---
 
@@ -97,12 +107,17 @@ Run WordPress Plugin Check. Automatically sets up PHP and installs dependencies.
   with:
     fail_on_error: 'true'  # Optional, default: true
     php_version: '7.4'  # Optional, default: 7.4
+    exclude_vendor: 'true'  # Optional, default: true (excludes vendor/ from check)
 ```
 
 **Outputs:**
 - `has_errors`: `true` if issues found
 
-**Note:** This action automatically runs `composer install --no-dev --optimize-autoloader`.
+**Notes:**
+- Automatically runs `composer install --no-dev --optimize-autoloader`
+- By default, **excludes `vendor/` directory** from checks (since it's third-party code)
+- Set `exclude_vendor: 'false'` to check the full distributable package including dependencies
+- Respects `.distignore` file for additional exclusions
 
 ## Complete Example Workflow
 

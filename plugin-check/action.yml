@@ -11,6 +11,10 @@ inputs:
     description: 'PHP version to use'
     required: false
     default: '7.4'
+  exclude_vendor:
+    description: 'Exclude vendor directory from plugin check'
+    required: false
+    default: 'true'
 
 outputs:
   has_errors:
@@ -34,7 +38,24 @@ runs:
       shell: bash
       run: |
         mkdir -p /tmp/plugin-clean
-        rsync -av --exclude-from='.distignore' ./ /tmp/plugin-clean/
+
+        # Build rsync command with excludes
+        RSYNC_CMD="rsync -av"
+
+        # Always exclude from .distignore if it exists
+        if [ -f ".distignore" ]; then
+          RSYNC_CMD="$RSYNC_CMD --exclude-from='.distignore'"
+        fi
+
+        # Optionally exclude vendor
+        if [ "${{ inputs.exclude_vendor }}" = "true" ]; then
+          RSYNC_CMD="$RSYNC_CMD --exclude='vendor'"
+        fi
+
+        # Execute rsync
+        eval "$RSYNC_CMD ./ /tmp/plugin-clean/"
+
+        # Replace current directory with clean copy
         find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
         cp -r /tmp/plugin-clean/. ./
 

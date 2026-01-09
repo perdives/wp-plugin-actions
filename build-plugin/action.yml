@@ -12,10 +12,26 @@ inputs:
   plugin_file:
     description: 'Main plugin PHP file. Required if version is not provided'
     required: false
-  create_checksum:
+  generate_checksum:
     description: 'Create SHA256 checksum file'
     required: false
     default: 'true'
+  php_version:
+    description: 'PHP version to use'
+    required: false
+    default: '7.4'
+  composer_args:
+    description: 'Arguments for composer install'
+    required: false
+    default: '--no-dev --optimize-autoloader'
+  npm_script:
+    description: 'NPM script to run for building assets (e.g., build, production). Leave empty to skip npm build.'
+    required: false
+    default: 'build'
+  skip_npm:
+    description: 'Skip npm install and build even if package.json exists'
+    required: false
+    default: 'false'
 
 outputs:
   zip_file:
@@ -28,6 +44,41 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ inputs.php_version }}
+        tools: composer:v2
+
+    - name: Install Composer dependencies
+      shell: bash
+      run: composer install ${{ inputs.composer_args }}
+
+    - name: Setup Node.js
+      if: inputs.skip_npm == 'false'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Check for package.json and build assets
+      if: inputs.skip_npm == 'false'
+      shell: bash
+      run: |
+        if [ -f "package.json" ]; then
+          echo "Found package.json, installing npm dependencies..."
+          npm install
+
+          if [ -n "${{ inputs.npm_script }}" ]; then
+            echo "Running npm script: ${{ inputs.npm_script }}"
+            npm run ${{ inputs.npm_script }}
+          fi
+        else
+          echo "No package.json found, skipping npm build"
+        fi
+
+    - name: Setup WP-CLI
+      uses: perdives/wp-plugin-actions/setup-wp-cli@main
+
     - name: Get version if not provided
       id: get_version
       if: inputs.version == ''
@@ -65,7 +116,7 @@ runs:
 
         echo "zip_file=${ZIP_FILE}" >> $GITHUB_OUTPUT
 
-        if [ "${{ inputs.create_checksum }}" = "true" ]; then
+        if [ "${{ inputs.generate_checksum }}" = "true" ]; then
           CHECKSUM_FILE="${ZIP_FILE}.sha256"
           sha256sum "${ZIP_FILE}" > "${CHECKSUM_FILE}"
           echo "checksum_file=${CHECKSUM_FILE}" >> $GITHUB_OUTPUT
