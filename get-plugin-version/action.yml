@@ -14,6 +14,9 @@ outputs:
   tag_name:
     description: 'The git tag name with v prefix (e.g., v1.2.3)'
     value: ${{ steps.get_version.outputs.tag_name }}
+  tag:
+    description: 'Alias for tag_name - the git tag with v prefix (e.g., v1.2.3)'
+    value: ${{ steps.get_version.outputs.tag_name }}
 
 runs:
   using: 'composite'

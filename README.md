@@ -17,6 +17,8 @@ Extract version number from WordPress plugin file header.
 - `version`: Plugin version (e.g., `1.2.3`)
 - `tag_name`: Git tag with v prefix (e.g., `v1.2.3`)
 
+**Note:** Use underscores in parameter names, not hyphens.
+
 ---
 
 ### 📦 setup-wp-cli
@@ -34,14 +36,14 @@ Build production-ready WordPress plugin zip. Automatically handles PHP setup, co
 ```yaml
 - uses: perdives/wp-plugin-actions/build-plugin@v0.1
   with:
-    plugin-slug: 'my-plugin'
-    plugin-file: 'my-plugin.php'  # Optional, auto-extracts version
+    plugin_slug: 'my-plugin'
+    plugin_file: 'my-plugin.php'  # Optional, auto-extracts version
     version: '1.2.3'  # Optional, extracted from plugin_file if not provided
-    generate-checksum: 'true'  # Optional, default: true
-    php-version: '7.4'  # Optional, default: 7.4
-    composer-args: '--no-dev --optimize-autoloader'  # Optional
-    npm-script: 'build'  # Optional, default: build (set empty to skip)
-    skip-npm: 'false'  # Optional, set true to skip npm entirely
+    generate_checksum: 'true'  # Optional, default: true
+    php_version: '7.4'  # Optional, default: 7.4
+    composer_args: '--no-dev --optimize-autoloader'  # Optional
+    npm_script: 'build'  # Optional, default: build (set empty to skip)
+    skip_npm: 'false'  # Optional, set true to skip npm entirely
 ```
 
 **Outputs:**
@@ -147,8 +149,9 @@ jobs:
       - name: Build plugin
         uses: perdives/wp-plugin-actions/build-plugin@v0.1
         with:
+          plugin_slug: 'my-plugin'
           plugin_file: 'my-plugin.php'
-          generate-checksum: true
+          generate_checksum: true
 
       - name: Upload to release
         uses: perdives/wp-plugin-actions/upload-to-release@v0.1
